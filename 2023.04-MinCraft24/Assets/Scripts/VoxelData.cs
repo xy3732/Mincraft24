@@ -6,7 +6,17 @@ public class VoxelData : MonoBehaviour
 {
     // 총 청크의 크기
     public static readonly int ChunkWidth = 5;
-    public static readonly int ChunkHeight = 5;
+    public static readonly int ChunkHeight = 15;
+    //총 청크 크기
+    public static readonly int WorldSizeCchunk = 64;
+
+    // 한 길이의 블럭의 수
+    public static int WorldSizeVoxels
+    {
+        get { return WorldSizeCchunk * ChunkWidth; }
+    }
+
+    public static readonly int ViewDistanceInChunks = 5;
 
     //현재 블럭 스프라이트 안에 가로 4개, 세로 4개의 블럭을 볼수 있다. 
     public static readonly int TextureAtlasSizeInBlock = 4;
