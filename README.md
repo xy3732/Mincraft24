@@ -7,3 +7,6 @@ Make again MinCraft new Version!
 - Add Chunk Script.
 - Add World Script.
 - Add VoxelData Script.
+
+*Version 0.0.002
+- Add chunk distance Update.
