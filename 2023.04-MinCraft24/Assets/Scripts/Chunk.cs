@@ -2,12 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-// 필수 요구 컴포넌트 생성
-[RequireComponent(typeof(MeshFilter))]
-[RequireComponent(typeof(MeshRenderer))]
-
-public class Chunk : MonoBehaviour
+public class Chunk
 {
+    public ChunkCoord coord;
+
+    GameObject chunkObject;
     MeshRenderer meshRenderer;
     MeshFilter meshFilter;
 
@@ -21,15 +20,23 @@ public class Chunk : MonoBehaviour
 
     World world;
 
-    private void Awake()
+    // 컨스트럭터 생성 - 현재 World스크립트에서 불러온다.
+    // Coord 는 청크의 위치이다.
+    public Chunk(ChunkCoord _coord, World _world)
     {
-        world = FindObjectOfType<World>();
-        meshRenderer = GetComponent<MeshRenderer>();
-        meshFilter = GetComponent<MeshFilter>();
-    }
+        coord = _coord;
+        world = _world;
 
-    private void Start()
-    {
+        chunkObject = new GameObject();
+        meshFilter = chunkObject.AddComponent<MeshFilter>();
+        meshRenderer = chunkObject.AddComponent<MeshRenderer>();
+
+        meshRenderer.material = world.material;
+        chunkObject.transform.SetParent(world.transform);
+        //청크 오브젝트의 월드 위치 설정.
+        chunkObject.transform.position = new Vector3(coord.x * VoxelData.ChunkWidth, 0.0f, coord.z * VoxelData.ChunkWidth);
+        chunkObject.name = "Chunk" + coord.x + ", " + coord.z;
+
         PopulateVoxelMap();
         CreateMeshData();
         CreateMesh();
@@ -47,9 +54,7 @@ public class Chunk : MonoBehaviour
                 for (int z = 0; z < VoxelData.ChunkWidth; z++)
                 {
                     //여기에서 나온 숫자는 블럭ID가 된다.
-                    if (y < 1) voxelmap[x, y, z] = 0;
-                    else if(y == VoxelData.ChunkHeight - 1) voxelmap[x,y,z] = 3;
-                    else voxelmap[x, y, z] = 1;
+                    voxelmap[x, y, z] = world.GetVoxel(new Vector3(x, y, z) + position);
                 }
             }
         }
@@ -74,7 +79,34 @@ public class Chunk : MonoBehaviour
         }
     }
 
+    public bool isActive
+    {
+        get { return chunkObject.activeSelf; }
+        set { chunkObject.SetActive(value); }
+    }
+
+    public Vector3 position
+    {
+        get { return chunkObject.transform.position; }
+    }
+
     // 블럭의 면들이 붙어 있는지 확인하는 메소드.
+    bool IsVoxelInChunk(int x, int y, int z)
+    {
+        // 블럭의 면들이 서로 붙어있으면 false 반환
+        if (x < 0 || x > VoxelData.ChunkWidth - 1 ||
+           y < 0 || y > VoxelData.ChunkHeight - 1 ||
+           z < 0 || z > VoxelData.ChunkWidth - 1)
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+    
+    // 블럭 확인
     bool CheckVoxel(Vector3 pos)
     {
         int x = Mathf.FloorToInt(pos.x);
@@ -82,12 +114,7 @@ public class Chunk : MonoBehaviour
         int z = Mathf.FloorToInt(pos.z);
 
         // 블럭의 면들이 서로 붙어있으면 false 반환
-        if(x < 0 || x > VoxelData.ChunkWidth - 1 ||
-           y < 0 || y > VoxelData.ChunkHeight - 1 ||
-           z < 0 || z > VoxelData.ChunkWidth - 1)
-        {
-            return false;
-        }
+        if(!IsVoxelInChunk(x, y, z)) return world.blockType[world.GetVoxel(pos + position)].isSolid;
 
         // 블럭의 데이터 값 반환
         return world.blockType[voxelmap[x,y,z]].isSolid;
@@ -152,5 +179,25 @@ public class Chunk : MonoBehaviour
         uvs.Add(new Vector2(x, y + VoxelData.NormalizedBlockTextureSize));
         uvs.Add(new Vector2(x + VoxelData.NormalizedBlockTextureSize, y));
         uvs.Add(new Vector2(x + VoxelData.NormalizedBlockTextureSize, y + VoxelData.NormalizedBlockTextureSize));
+    }
+}
+
+public class ChunkCoord
+{
+    public int x;
+    public int z;
+
+    public ChunkCoord(int _x, int _z)
+    {
+        x = _x;
+        z = _z;
+    }
+
+    // 다른 청크랑 위치값이 같다면.
+    public bool Equals(ChunkCoord other)
+    {
+        if (other == null) return false;
+        else if (other.x == x && other.z == z) return true;
+        else return false;
     }
 }
