@@ -7,9 +7,16 @@ public class World : MonoBehaviour
     // 플레이어
     public Transform player;
     public Vector3 spawnPos;
+    [Space(20)]
+
+    // 맵 생성 시드값. - 마인크래프트의 시드랑 같은것이다.
+    public int seed;
+    // 지형 종류
+    public BiomeAttributes biome;
+    [Space(20)]
 
     public Material material;
-    public BlockType[] blockType;
+    public BlockTypes[] blockType;
 
     Chunk[,] chunks = new Chunk[VoxelData.WorldSizeCchunk, VoxelData.WorldSizeCchunk];
 
@@ -19,8 +26,11 @@ public class World : MonoBehaviour
 
     private void Start()
     {
+        // 시드값 랜덤
+        Random.InitState(seed);
+
         // 스폰 장소를 먼저 계산 하고 맵을 생성 해야 한다.
-        spawnPos = new Vector3((VoxelData.WorldSizeCchunk * VoxelData.ChunkWidth) / 2f, VoxelData.ChunkHeight + 2f, (VoxelData.WorldSizeCchunk * VoxelData.ChunkWidth) / 2f);
+        spawnPos = new Vector3((VoxelData.WorldSizeCchunk * VoxelData.ChunkWidth) / 2f, VoxelData.ChunkHeight -50f, (VoxelData.WorldSizeCchunk * VoxelData.ChunkWidth) / 2f);
 
         // 청크 생성
         GenerateWorld();
@@ -31,10 +41,11 @@ public class World : MonoBehaviour
 
     private void Update()
     {
-        //플레이어 현재 청크를 가져온다.
+        // 플레이어 현재 청크를 가져온다.
         playerChunkCoord = GetChunkFromVector3(player.position);
-        //  최근에 저장했던 청크랑 현재 청크랑 같지 않다면 청크를 업데이트를 한다.
-        if(!playerChunkCoord.Equals(playerLastChunkCoord)) CheckViewDistance();
+
+        // 최근에 저장했던 청크랑 현재 청크랑 같지 않다면 청크를 업데이트를 한다.
+        //if(!playerChunkCoord.Equals(playerLastChunkCoord)) CheckViewDistance();
     }
 
     // 월드 생성기
@@ -109,13 +120,61 @@ public class World : MonoBehaviour
         }
     }
 
+    public bool CheckForVoxel(float _x, float _y, float _z)
+    {
+        int xCheck = Mathf.FloorToInt(_x);
+        int yCheck = Mathf.FloorToInt(_y);
+        int zCheck = Mathf.FloorToInt(_z);
+
+        int xChunk = xCheck / VoxelData.ChunkWidth;
+        int zChunk = zCheck / VoxelData.ChunkWidth;
+
+        xCheck -= (xChunk * VoxelData.ChunkWidth);
+        zCheck -= (zChunk * VoxelData.ChunkWidth);
+
+        return blockType[chunks[xChunk, zChunk].voxelmap[xCheck, yCheck, zCheck]].isSolid;
+    }
+
+
     // 블럭이 어떤 블럭인지 반환하는 메소드.
     public byte GetVoxel(Vector3 pos)
     {
+        int yPos = Mathf.FloorToInt(pos.y);
+
+        /* 불변 Pass */
+
+        // 월드 사이즈 밬에는 공기 블럭으로 생성.
         if (!isVoxelInWorld(pos)) return 0;
-        else if (pos.y < 1) return 1;
-        else if (pos.y == VoxelData.ChunkHeight - 1) return 3;
-        else return 2;
+        // 바닥에 있는 블럭은 BedBlock으로 생성.
+        if (yPos == 0) return 1;
+
+        /* 지형 Pass */
+
+        // 펄린 노이즈로 지형 생성.
+        int terrainHeight = Mathf.FloorToInt(biome.terrainHeight * Noise.Get2DPerlin(new Vector2(pos.x, pos.z), 0, biome.terrainScale)) + biome.solidGroundHeight;
+        byte voxelvalue = 0;
+
+        // 표면과 같은 값이면 잔디 블럭으로 생성
+        if (yPos == terrainHeight) voxelvalue = 3;
+        // 표면의 아래 4블럭 부터 표면 전 까지 흙으로 블럭 생성.
+        else if (yPos < terrainHeight && yPos > terrainHeight - 4) voxelvalue = 5;
+        // 표면 보다 위에 있으면 공기 블럭으로 대체
+        else if (yPos > terrainHeight) return 0;
+        else voxelvalue =  2;
+
+        /* 2번째 지형 PASS */
+        if (voxelvalue == 2)
+        {
+            foreach (var lode in biome.lodes)
+            {
+                if(yPos > lode.minHeight && yPos < lode.maxHeight)
+                {
+                    if (Noise.Get3DPerlin(pos, lode.noise, lode.scale, lode.threhold)) voxelvalue = lode.blockID;
+                }
+            }
+        }
+
+        return voxelvalue;
     }
 
     // 청크 생성기
@@ -143,42 +202,5 @@ public class World : MonoBehaviour
 
 }
 
-//블럭 타입
-[System.Serializable]
-public class BlockType
-{
-    public string BlockName;
-    public bool isSolid;
 
-    [Header("텍스쳐값")]
-    public int backFaceTexture;
-    public int frontFaceTexture;
-    public int topFaceTexture;
-    public int bottomFaceTexture;
-    public int leftFaceTexture;
-    public int rightFaceTexture;
-
-    public int GetTextureID(int faceIndex)
-    {
-        //뒤, 앞, 위, 밑, 왼, 오
-        switch (faceIndex)
-        {
-            case 0:
-                return backFaceTexture;
-            case 1:
-                return frontFaceTexture;
-            case 2:
-                return topFaceTexture;
-            case 3:
-                return bottomFaceTexture;
-            case 4:
-                return leftFaceTexture;
-            case 5:
-                return rightFaceTexture;
-            default:
-                Debug.Log("인덱스값 에러");
-                return 0;
-        }
-    }
-}
 

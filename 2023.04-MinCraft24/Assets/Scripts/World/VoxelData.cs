@@ -5,10 +5,10 @@ using UnityEngine;
 public class VoxelData : MonoBehaviour
 {
     // 총 청크의 크기
-    public static readonly int ChunkWidth = 5;
-    public static readonly int ChunkHeight = 15;
+    public static readonly int ChunkWidth = 16;
+    public static readonly int ChunkHeight = 128;
     //총 청크 크기
-    public static readonly int WorldSizeCchunk = 64;
+    public static readonly int WorldSizeCchunk = 20;
 
     // 한 길이의 블럭의 수
     public static int WorldSizeVoxels
