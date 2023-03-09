@@ -18,14 +18,23 @@ public class World : MonoBehaviour
     public Material material;
     public BlockTypes[] blockType;
 
+    //총 청크의 크기
     Chunk[,] chunks = new Chunk[VoxelData.WorldSizeCchunk, VoxelData.WorldSizeCchunk];
 
+    // 로딩한적 있는 청크
     List<ChunkCoord> activeChunks = new List<ChunkCoord>();
-    ChunkCoord playerChunkCoord;
+    public ChunkCoord playerChunkCoord;
     ChunkCoord playerLastChunkCoord;
 
+    List<ChunkCoord> chunkToCreate = new List<ChunkCoord>();
+    private bool isCreatingChunk;
+
+    public GameObject debugScreen;
     private void Start()
     {
+        // 60프레임 타겟 고정
+        Application.targetFrameRate = 60;
+
         // 시드값 랜덤
         Random.InitState(seed);
 
@@ -45,7 +54,12 @@ public class World : MonoBehaviour
         playerChunkCoord = GetChunkFromVector3(player.position);
 
         // 최근에 저장했던 청크랑 현재 청크랑 같지 않다면 청크를 업데이트를 한다.
-        //if(!playerChunkCoord.Equals(playerLastChunkCoord)) CheckViewDistance();
+        if(!playerChunkCoord.Equals(playerLastChunkCoord)) CheckViewDistance();
+
+        if (chunkToCreate.Count > 0 && !isCreatingChunk) StartCoroutine(CreateChunk());
+
+        // 디버그 텍스트
+        if (Input.GetKeyDown(KeyCode.F3)) debugScreen.SetActive(!debugScreen.activeSelf);
     }
 
     // 월드 생성기
@@ -58,7 +72,8 @@ public class World : MonoBehaviour
         {
             for (int z = (VoxelData.WorldSizeCchunk / 2) - VoxelData.ViewDistanceInChunks; z < (VoxelData.WorldSizeCchunk / 2) + VoxelData.ViewDistanceInChunks; z++)
             {
-                CreateNewChunk(x, z);
+                chunks[x, z] = new Chunk(new ChunkCoord(x, z), this, true);
+                activeChunks.Add(new ChunkCoord(x,z));
             }
         }
 
@@ -79,6 +94,7 @@ public class World : MonoBehaviour
     {
         //플레이어 기준으로 vector값 계산
         ChunkCoord coord = GetChunkFromVector3(player.position);
+        playerLastChunkCoord = playerChunkCoord;
 
         // 현재 켜져있는 모든 청크들은 리스트화 해서 보관한다.
         List<ChunkCoord> previouseActiveChunk = new List<ChunkCoord>(activeChunks);
@@ -92,14 +108,15 @@ public class World : MonoBehaviour
                 if(IsChunkInWorld(new ChunkCoord(x,z)))
                 {
                     // 만약 현재 청크에 한번이라도 청크를 생성하지 않았다면 청크를 생성한다.
-                    if (chunks[x, z] == null) CreateNewChunk(x, z);
-                    
-                    // 청크를 이미 생성한적이 있다면 그 청크를 다시 활성화 처리를 한다.
-                    else if(!chunks[x, z].isActive)
+                    if (chunks[x, z] == null)
                     {
-                        chunks[x, z].isActive = true;
-                        activeChunks.Add(new ChunkCoord(x, z));
+                        chunks[x, z] = new Chunk(new ChunkCoord(x, z), this, false);
+                        chunkToCreate.Add(new ChunkCoord(x, z));
                     }
+                    // 청크를 이미 생성한적이 있다면 그 청크를 다시 활성화 처리를 한다.
+                    else if (!chunks[x, z].isActive) chunks[x, z].isActive = true;
+                    
+                    activeChunks.Add(new ChunkCoord(x, z));
                 }
 
                 // 만약에 현재 시야에 있는 청크라면 보관처리를 하지 않는다.
@@ -120,19 +137,16 @@ public class World : MonoBehaviour
         }
     }
 
-    public bool CheckForVoxel(float _x, float _y, float _z)
+    public bool CheckForVoxel(Vector3 pos)
     {
-        int xCheck = Mathf.FloorToInt(_x);
-        int yCheck = Mathf.FloorToInt(_y);
-        int zCheck = Mathf.FloorToInt(_z);
+        ChunkCoord thisChunk = new ChunkCoord(pos);
 
-        int xChunk = xCheck / VoxelData.ChunkWidth;
-        int zChunk = zCheck / VoxelData.ChunkWidth;
+        if(!IsChunkInWorld(thisChunk) || pos.y < 0 || pos.y > VoxelData.ChunkHeight) return false;
 
-        xCheck -= (xChunk * VoxelData.ChunkWidth);
-        zCheck -= (zChunk * VoxelData.ChunkWidth);
+        if (chunks[thisChunk.x, thisChunk.z] != null && chunks[thisChunk.x, thisChunk.z].isVoxelMapPopulated)
+            return blockType[chunks[thisChunk.x, thisChunk.z].GecVoxelFromGlobalVector3(pos)].isSolid;
 
-        return blockType[chunks[xChunk, zChunk].voxelmap[xCheck, yCheck, zCheck]].isSolid;
+        return blockType[GetVoxel(pos)].isSolid;
     }
 
 
@@ -177,13 +191,6 @@ public class World : MonoBehaviour
         return voxelvalue;
     }
 
-    // 청크 생성기
-    void CreateNewChunk(int x, int z)
-    {
-        chunks[x, z] = new Chunk(new ChunkCoord(x, z), this);
-        activeChunks.Add(new ChunkCoord(x, z));
-    }
-
     bool IsChunkInWorld(ChunkCoord _coord)
     {
         if (_coord.x > 0 && _coord.x < VoxelData.WorldSizeCchunk - 1 &&
@@ -198,6 +205,20 @@ public class World : MonoBehaviour
            pos.y >= 0 && pos.y < VoxelData.ChunkHeight &&
            pos.z >= 0 && pos.z < VoxelData.WorldSizeVoxels) return true;
         else return false;
+    }
+
+    IEnumerator CreateChunk()
+    {
+        isCreatingChunk = true;
+
+        while(chunkToCreate.Count > 0)
+        {
+            chunks[chunkToCreate[0].x, chunkToCreate[0].z].init();
+            chunkToCreate.RemoveAt(0);
+            yield return null;
+        }
+
+        isCreatingChunk = false;
     }
 
 }

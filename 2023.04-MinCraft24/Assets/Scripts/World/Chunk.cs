@@ -21,13 +21,22 @@ public class Chunk
 
     World world;
 
+    private bool _isActive;
+    public bool isVoxelMapPopulated = false;
     // 컨스트럭터 생성 - 현재 World스크립트에서 불러온다.
     // Coord 는 청크의 위치이다.
-    public Chunk(ChunkCoord _coord, World _world)
+    public Chunk(ChunkCoord _coord, World _world, bool generateOnLoad)
     {
         coord = _coord;
         world = _world;
 
+        isActive = true;
+
+        if (generateOnLoad) init();
+    }
+
+    public void init()
+    {
         chunkObject = new GameObject();
         meshFilter = chunkObject.AddComponent<MeshFilter>();
         meshRenderer = chunkObject.AddComponent<MeshRenderer>();
@@ -63,7 +72,7 @@ public class Chunk
                 }
             }
         }
-
+        isVoxelMapPopulated = true;
     }
 
     // 청크 생성기
@@ -86,8 +95,12 @@ public class Chunk
 
     public bool isActive
     {
-        get { return chunkObject.activeSelf; }
-        set { chunkObject.SetActive(value); }
+        get { return _isActive; }
+        set 
+        {
+            _isActive = value;
+            if (chunkObject != null) chunkObject.SetActive(value);
+        }
     }
 
     public Vector3 position
@@ -119,10 +132,22 @@ public class Chunk
         int z = Mathf.FloorToInt(pos.z);
 
         // 블럭의 면들이 서로 붙어있으면 false 반환
-        if(!IsVoxelInChunk(x, y, z)) return world.blockType[world.GetVoxel(pos + position)].isSolid;
+        if(!IsVoxelInChunk(x, y, z)) return world.CheckForVoxel(pos + position);
 
         // 블럭의 데이터 값 반환
         return world.blockType[voxelmap[x,y,z]].isSolid;
+    }
+
+    public byte GecVoxelFromGlobalVector3(Vector3 pos)
+    {
+        int xCheck = Mathf.FloorToInt(pos.x);
+        int yCheck = Mathf.FloorToInt(pos.y);
+        int zCheck = Mathf.FloorToInt(pos.z);
+
+        xCheck -= Mathf.FloorToInt(chunkObject.transform.position.x);
+        zCheck -= Mathf.FloorToInt(chunkObject.transform.position.z);
+
+        return voxelmap[xCheck, yCheck, zCheck];
     }
 
     // pos - 블럭이 설치될 위치
@@ -192,10 +217,25 @@ public class ChunkCoord
     public int x;
     public int z;
 
+    public ChunkCoord()
+    {
+        x = 0;
+        z = 0;
+    }
+
     public ChunkCoord(int _x, int _z)
     {
         x = _x;
         z = _z;
+    }
+
+    public ChunkCoord(Vector3 pos)
+    {
+        int xCheck = Mathf.FloorToInt(pos.x);
+        int zCheck = Mathf.FloorToInt(pos.z);
+
+        x = xCheck / VoxelData.ChunkWidth;
+        z = zCheck / VoxelData.ChunkWidth;
     }
 
     // 다른 청크랑 위치값이 같다면.
