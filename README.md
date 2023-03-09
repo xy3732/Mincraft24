@@ -11,6 +11,7 @@ Make again MinCraft new Version!
 *Version 0.0.002
 - Add chunk distance Update.
 
-*version 0.0.003
+*version 0.0.003~031
 - Add Player Movement
 - Add none Collider Map
+- Update Chunk Optimized
