@@ -9,6 +9,7 @@ public class Chunk
     GameObject chunkObject;
     MeshRenderer meshRenderer;
     MeshFilter meshFilter;
+    MeshCollider meshCollider;
 
     // voxel 데이터
     int vertexIndex = 0;
@@ -16,7 +17,7 @@ public class Chunk
     List<int> triangles = new List<int>();
     List<Vector2> uvs = new List<Vector2>();
 
-    byte[,,] voxelmap = new byte[VoxelData.ChunkWidth, VoxelData.ChunkHeight, VoxelData.ChunkWidth];
+    public byte[,,] voxelmap = new byte[VoxelData.ChunkWidth, VoxelData.ChunkHeight, VoxelData.ChunkWidth];
 
     World world;
 
@@ -30,16 +31,20 @@ public class Chunk
         chunkObject = new GameObject();
         meshFilter = chunkObject.AddComponent<MeshFilter>();
         meshRenderer = chunkObject.AddComponent<MeshRenderer>();
+        //meshCollider = chunkObject.AddComponent<MeshCollider>();
 
         meshRenderer.material = world.material;
         chunkObject.transform.SetParent(world.transform);
         //청크 오브젝트의 월드 위치 설정.
         chunkObject.transform.position = new Vector3(coord.x * VoxelData.ChunkWidth, 0.0f, coord.z * VoxelData.ChunkWidth);
         chunkObject.name = "Chunk" + coord.x + ", " + coord.z;
+        //chunkObject.layer = 6;
 
         PopulateVoxelMap();
         CreateMeshData();
         CreateMesh();
+
+        //meshCollider.sharedMesh = meshFilter.mesh;
     }
 
     // 블럭맵 생성
@@ -72,8 +77,8 @@ public class Chunk
             {
                 for (int z = 0; z < VoxelData.ChunkWidth; z++)
                 {
-                    // 블럭맵에서 블럭의 위치값을 가져와서 블럭을 생성한다.
-                    AddVoxelDataToChunk(new Vector3(x, y, z));
+                    // 블럭맵에서 블럭의 위치값을 가져와서 Solid인지 확인하고 블럭을 생성한다.
+                    if (world.blockType[voxelmap[x, y, z]].isSolid) AddVoxelDataToChunk(new Vector3(x, y, z));
                 }
             }
         }
