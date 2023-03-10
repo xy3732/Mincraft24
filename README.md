@@ -15,3 +15,7 @@ Make again MinCraft new Version!
 - Add Player Movement
 - Add none Collider Map
 - Update Chunk Optimized
+
+*version 0.0.004
+- Add Block Destroy
+- Add Block Select
