@@ -16,6 +16,7 @@ Make again MinCraft new Version!
 - Add none Collider Map
 - Update Chunk Optimized
 
-*version 0.0.004
+*version 0.0.004~041
 - Add Block Destroy
 - Add Block Select
+- Update ItemSlots
