@@ -45,13 +45,13 @@ public class World : MonoBehaviour
         GenerateWorld();
 
         // 플레이어가 최근에 있던 청크를 저장한다.
-        playerLastChunkCoord = GetChunkFromVector3(player.position);
+        playerLastChunkCoord = GetChunkCoordFromVector3(player.position);
     }
 
     private void Update()
     {
         // 플레이어 현재 청크를 가져온다.
-        playerChunkCoord = GetChunkFromVector3(player.position);
+        playerChunkCoord = GetChunkCoordFromVector3(player.position);
 
         // 최근에 저장했던 청크랑 현재 청크랑 같지 않다면 청크를 업데이트를 한다.
         if(!playerChunkCoord.Equals(playerLastChunkCoord)) CheckViewDistance();
@@ -81,7 +81,7 @@ public class World : MonoBehaviour
         player.position = spawnPos;
     }
 
-    ChunkCoord GetChunkFromVector3(Vector3 pos)
+    ChunkCoord GetChunkCoordFromVector3(Vector3 pos)
     {
         int x = Mathf.FloorToInt(pos.x / VoxelData.ChunkWidth);
         int z = Mathf.FloorToInt(pos.z / VoxelData.ChunkWidth);
@@ -89,11 +89,20 @@ public class World : MonoBehaviour
         return new ChunkCoord(x, z);
     }
 
+    public Chunk GetChunkFromVector3(Vector3 pos)
+    {
+        int x = Mathf.FloorToInt(pos.x / VoxelData.ChunkWidth);
+        int z = Mathf.FloorToInt(pos.z / VoxelData.ChunkWidth);
+
+        return chunks[x, z];
+    }
+
+
     // 플레이어 시야기반으로 청크 업데이트.
     void CheckViewDistance()
     {
         //플레이어 기준으로 vector값 계산
-        ChunkCoord coord = GetChunkFromVector3(player.position);
+        ChunkCoord coord = GetChunkCoordFromVector3(player.position);
         playerLastChunkCoord = playerChunkCoord;
 
         // 현재 켜져있는 모든 청크들은 리스트화 해서 보관한다.

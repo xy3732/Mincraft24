@@ -50,8 +50,7 @@ public class Chunk
         //chunkObject.layer = 6;
 
         PopulateVoxelMap();
-        CreateMeshData();
-        CreateMesh();
+        UpdateChunk();
 
         //meshCollider.sharedMesh = meshFilter.mesh;
     }
@@ -76,8 +75,11 @@ public class Chunk
     }
 
     // 청크 생성기
-    void CreateMeshData()
+    void UpdateChunk()
     {
+        // 매쉬데이터 초기화
+        ClearMeshData();
+
         // 청크의 높이 만큼 Y값 반복
         for (int y = 0; y < VoxelData.ChunkHeight; y++)
         {
@@ -87,10 +89,20 @@ public class Chunk
                 for (int z = 0; z < VoxelData.ChunkWidth; z++)
                 {
                     // 블럭맵에서 블럭의 위치값을 가져와서 Solid인지 확인하고 블럭을 생성한다.
-                    if (world.blockType[voxelmap[x, y, z]].isSolid) AddVoxelDataToChunk(new Vector3(x, y, z));
+                    if (world.blockType[voxelmap[x, y, z]].isSolid) UpdateMeshData(new Vector3(x, y, z));
                 }
             }
         }
+        CreateMesh();
+    }
+
+    // 매쉬데이터 초기화
+    void ClearMeshData()
+    {
+        vertexIndex = 0;
+        vertices.Clear();
+        triangles.Clear();
+        uvs.Clear();
     }
 
     public bool isActive
@@ -123,6 +135,38 @@ public class Chunk
             return true;
         }
     }
+
+    public void EditVoxel(Vector3 pos, byte newID)
+    {
+        int xCheck = Mathf.FloorToInt(pos.x);
+        int yCheck = Mathf.FloorToInt(pos.y);
+        int zCheck = Mathf.FloorToInt(pos.z);
+
+        xCheck -= Mathf.FloorToInt(chunkObject.transform.position.x);
+        zCheck -= Mathf.FloorToInt(chunkObject.transform.position.z);
+
+        voxelmap[xCheck, yCheck, zCheck] = newID;
+
+        UpdateSetSurroundingVoxels(xCheck, yCheck, zCheck);
+
+        UpdateChunk();
+    }
+
+    // 근처 청크 업데이트
+    void UpdateSetSurroundingVoxels(int x, int y, int z)
+    {
+        Vector3 thisVoxel = new Vector3(x, y, z);
+ 
+        for (int p = 0; p < 6; p++)
+        {
+            Vector3 currentVoxel = thisVoxel + VoxelData.faceCheck[p];
+
+            if(!IsVoxelInChunk((int)currentVoxel.x, (int)currentVoxel.y, (int)currentVoxel.z))
+            {
+                world.GetChunkFromVector3(currentVoxel + position).UpdateChunk();
+            }
+        }
+    }
     
     // 블럭 확인
     bool CheckVoxel(Vector3 pos)
@@ -151,7 +195,7 @@ public class Chunk
     }
 
     // pos - 블럭이 설치될 위치
-    void AddVoxelDataToChunk(Vector3 pos)
+    void UpdateMeshData(Vector3 pos)
     {
         // 총 6면에, 꼭짓점 갯수 6개
         for (int x = 0; x < 6; x++)
@@ -193,6 +237,7 @@ public class Chunk
 
         meshFilter.mesh = mesh;
     }
+
 
     // 블럭에 택스쳐 추가
     void AddTexture(int textureID)
