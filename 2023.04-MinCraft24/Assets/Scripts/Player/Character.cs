@@ -35,8 +35,7 @@ public class Character : MonoBehaviour
     [Space(20)]
 
     //UI
-    public TextMeshProUGUI selectedBlockText;
-    public byte selectedBlockIndex = 1;
+    public byte selectedBlockIndex = 0;
 
     // 에니메이션
     bool isWaiting = false;
@@ -50,7 +49,6 @@ public class Character : MonoBehaviour
         world = GameObject.Find("World").GetComponent<World>();
 
         Cursor.lockState = CursorLockMode.Locked;
-        selectedBlockText.text = world.blockType[selectedBlockIndex].BlockName + "block selected";
     }
 
     private void FixedUpdate()
@@ -128,17 +126,6 @@ public class Character : MonoBehaviour
             StartCoroutine(RestWaiting());
         }
 
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
-        if(scroll != 0)
-        {
-            if (scroll > 0) selectedBlockIndex++;
-            else selectedBlockIndex--;
-
-            if (selectedBlockIndex > (byte)(world.blockType.Length - 1)) selectedBlockIndex = 1;
-            if (selectedBlockIndex < 1) selectedBlockIndex = (byte)(world.blockType.Length - 1);
-
-            selectedBlockText.text = world.blockType[selectedBlockIndex].BlockName + "block Selected";
-        }
 
         if(highlightBlock.gameObject.activeSelf)
         {
