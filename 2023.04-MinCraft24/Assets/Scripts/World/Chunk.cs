@@ -15,8 +15,11 @@ public class Chunk
     int vertexIndex = 0;
     List<Vector3> vertices = new List<Vector3>();
     List<int> triangles = new List<int>();
-    List<Vector2> uvs = new List<Vector2>();
+    List<int> transparentTriangles = new List<int>();
+    Material[] materials = new Material[2];
 
+    List<Vector2> uvs = new List<Vector2>();
+     
     public byte[,,] voxelmap = new byte[VoxelData.ChunkWidth, VoxelData.ChunkHeight, VoxelData.ChunkWidth];
 
     World world;
@@ -41,6 +44,11 @@ public class Chunk
         meshFilter = chunkObject.AddComponent<MeshFilter>();
         meshRenderer = chunkObject.AddComponent<MeshRenderer>();
         //meshCollider = chunkObject.AddComponent<MeshCollider>();
+
+        // 투명 메테리얼 이랑 솔리드 메테리얼 합치기
+        materials[0] = world.material;
+        materials[1] = world.transparentMaterial;
+        meshRenderer.materials = materials;
 
         meshRenderer.material = world.material;
         chunkObject.transform.SetParent(world.transform);
@@ -176,10 +184,10 @@ public class Chunk
         int z = Mathf.FloorToInt(pos.z);
 
         // 블럭의 면들이 서로 붙어있으면 false 반환
-        if(!IsVoxelInChunk(x, y, z)) return world.CheckForVoxel(pos + position);
+        if(!IsVoxelInChunk(x, y, z)) return world.CheckForVoxelTransparent(pos + position);
 
         // 블럭의 데이터 값 반환
-        return world.blockType[voxelmap[x,y,z]].isSolid;
+        return world.blockType[voxelmap[x,y,z]].isTransparent;
     }
 
     public byte GecVoxelFromGlobalVector3(Vector3 pos)
@@ -197,14 +205,15 @@ public class Chunk
     // pos - 블럭이 설치될 위치
     void UpdateMeshData(Vector3 pos)
     {
+        //블럭ID
+        byte blockID = voxelmap[(int)pos.x, (int)pos.y, (int)pos.z];
+        bool isTransparent = world.blockType[blockID].isTransparent;
+
         // 총 6면에, 꼭짓점 갯수 6개
         for (int x = 0; x < 6; x++)
         {
-            if (!CheckVoxel(pos + VoxelData.faceCheck[x]))
+            if (CheckVoxel(pos + VoxelData.faceCheck[x]))
             {
-                //블럭ID
-                byte blockID = voxelmap[(int)pos.x, (int)pos.y, (int)pos.z];
-
                 // 현재 중복되는 vertex 2개를 없에기 위해서 이렇게 만들었다.
                 for(int y = 0; y<4; y++)
                 {
@@ -215,12 +224,25 @@ public class Chunk
                 AddTexture(world.blockType[blockID].GetTextureID(x));
 
                 // VoxelData - voxelTriangles에 보면 현재 1, 2, 2, 1, 3을 알수 있다.
-                triangles.Add(vertexIndex);
-                triangles.Add(vertexIndex + 1);
-                triangles.Add(vertexIndex + 2);
-                triangles.Add(vertexIndex + 2);
-                triangles.Add(vertexIndex + 1);
-                triangles.Add(vertexIndex + 3);
+                // 블럭의 정보가 투명블럭이 아니라면 솔리드 블럭으로 생성, 또는 투명 블럭으로 생성.
+                if (!isTransparent)
+                {
+                    triangles.Add(vertexIndex);
+                    triangles.Add(vertexIndex + 1);
+                    triangles.Add(vertexIndex + 2);
+                    triangles.Add(vertexIndex + 2);
+                    triangles.Add(vertexIndex + 1);
+                    triangles.Add(vertexIndex + 3);
+                }
+                else
+                {
+                    transparentTriangles.Add(vertexIndex);
+                    transparentTriangles.Add(vertexIndex + 1);
+                    transparentTriangles.Add(vertexIndex + 2);
+                    transparentTriangles.Add(vertexIndex + 2);
+                    transparentTriangles.Add(vertexIndex + 1);
+                    transparentTriangles.Add(vertexIndex + 3);
+                }
                 vertexIndex += 4;
             }
         }
@@ -231,7 +253,11 @@ public class Chunk
     {
         Mesh mesh = new Mesh();
         mesh.vertices = vertices.ToArray();
-        mesh.triangles = triangles.ToArray();
+
+        mesh.subMeshCount = 2;
+        mesh.SetTriangles(triangles.ToArray(), 0);
+        mesh.SetTriangles(transparentTriangles.ToArray(), 1);
+
         mesh.uv = uvs.ToArray();
         mesh.RecalculateNormals();
 

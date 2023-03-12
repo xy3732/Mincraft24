@@ -7,6 +7,7 @@ public class BlockTypes
 {
     public string BlockName;
     public bool isSolid;
+    public bool isTransparent;
     public Sprite icon;
 
     [Header("텍스쳐값")]

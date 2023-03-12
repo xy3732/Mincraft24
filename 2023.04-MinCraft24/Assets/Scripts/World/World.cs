@@ -16,6 +16,7 @@ public class World : MonoBehaviour
     [Space(20)]
 
     public Material material;
+    public Material transparentMaterial;
     public BlockTypes[] blockType;
 
     //총 청크의 크기
@@ -156,6 +157,18 @@ public class World : MonoBehaviour
             return blockType[chunks[thisChunk.x, thisChunk.z].GecVoxelFromGlobalVector3(pos)].isSolid;
 
         return blockType[GetVoxel(pos)].isSolid;
+    }
+
+    public bool CheckForVoxelTransparent(Vector3 pos)
+    {
+        ChunkCoord thisChunk = new ChunkCoord(pos);
+
+        if (!IsChunkInWorld(thisChunk) || pos.y < 0 || pos.y > VoxelData.ChunkHeight) return false;
+
+        if (chunks[thisChunk.x, thisChunk.z] != null && chunks[thisChunk.x, thisChunk.z].isVoxelMapPopulated)
+            return blockType[chunks[thisChunk.x, thisChunk.z].GecVoxelFromGlobalVector3(pos)].isTransparent;
+
+        return blockType[GetVoxel(pos)].isTransparent;
     }
 
 
