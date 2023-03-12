@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+using System.Threading;
+
 public class Chunk
 {
     public ChunkCoord coord;
@@ -19,16 +21,23 @@ public class Chunk
     List<int> transparentTriangles = new List<int>();
     Material[] materials = new Material[2];
 
+    public Vector3 position;
+
     List<Vector2> uvs = new List<Vector2>();
      
     public byte[,,] voxelmap = new byte[VoxelData.ChunkWidth, VoxelData.ChunkHeight, VoxelData.ChunkWidth];
 
+    // 
     public Queue<VoxelMod> modifications = new Queue<VoxelMod>();
+
 
     World world;
 
     private bool _isActive;
-    public bool isVoxelMapPopulated = false;
+    private bool isVoxelMapPopulated = false;
+    //쓰레딩
+    private bool threadLocked = false;
+
     // 컨스트럭터 생성 - 현재 World스크립트에서 불러온다.
     // Coord 는 청크의 위치이다.
     public Chunk(ChunkCoord _coord, World _world, bool generateOnLoad)
@@ -58,10 +67,11 @@ public class Chunk
         //청크 오브젝트의 월드 위치 설정.
         chunkObject.transform.position = new Vector3(coord.x * VoxelData.ChunkWidth, 0.0f, coord.z * VoxelData.ChunkWidth);
         chunkObject.name = "Chunk" + coord.x + ", " + coord.z;
+        position = chunkObject.transform.position;
         //chunkObject.layer = 6;
 
-        PopulateVoxelMap();
-        UpdateChunk();
+        Thread myThread = new Thread(new ThreadStart(PopulateVoxelMap));
+        myThread.Start();
 
         //meshCollider.sharedMesh = meshFilter.mesh;
     }
@@ -82,12 +92,22 @@ public class Chunk
                 }
             }
         }
+        _updateChunk();
         isVoxelMapPopulated = true;
     }
 
-    // 청크 생성기
     public void UpdateChunk()
     {
+        Thread myThread = new Thread(new ThreadStart(_updateChunk));
+        myThread.Start();
+    }
+
+    // 청크 생성기
+    private void _updateChunk()
+    {
+        // 쓰레드
+        threadLocked = true;
+
         while (modifications.Count > 0)
         {
             VoxelMod v = modifications.Dequeue();
@@ -111,7 +131,11 @@ public class Chunk
                 }
             }
         }
-        CreateMesh();
+        lock (world.chunkToDraw)
+        {
+            world.chunkToDraw.Enqueue(this);
+        }
+        threadLocked = false;
     }
 
     // 매쉬데이터 초기화
@@ -134,9 +158,14 @@ public class Chunk
         }
     }
 
-    public Vector3 position
+    // 쓰레딩
+    public bool isEditable
     {
-        get { return chunkObject.transform.position; }
+        get
+        {
+            if (!isVoxelMapPopulated || threadLocked) return false;
+            else return true;
+        }
     }
 
     // 블럭의 면들이 붙어 있는지 확인하는 메소드.
@@ -182,7 +211,7 @@ public class Chunk
 
             if(!IsVoxelInChunk((int)currentVoxel.x, (int)currentVoxel.y, (int)currentVoxel.z))
             {
-                world.GetChunkFromVector3(currentVoxel + position).UpdateChunk();
+                world.GetChunkFromVector3(currentVoxel + position)._updateChunk();
             }
         }
     }
@@ -207,8 +236,8 @@ public class Chunk
         int yCheck = Mathf.FloorToInt(pos.y);
         int zCheck = Mathf.FloorToInt(pos.z);
 
-        xCheck -= Mathf.FloorToInt(chunkObject.transform.position.x);
-        zCheck -= Mathf.FloorToInt(chunkObject.transform.position.z);
+        xCheck -= Mathf.FloorToInt(position.x);
+        zCheck -= Mathf.FloorToInt(position.z);
 
         return voxelmap[xCheck, yCheck, zCheck];
     }
@@ -260,7 +289,7 @@ public class Chunk
     }
 
     // 이때까지 계산된 블럭의 위치값으로 매쉬 생성.
-    void CreateMesh()
+    public void CreateMesh()
     {
         Mesh mesh = new Mesh();
         mesh.vertices = vertices.ToArray();
