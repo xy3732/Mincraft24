@@ -1235,6 +1235,16 @@ MonoBehaviour:
     bottomFaceTexture: 3
     leftFaceTexture: 3
     rightFaceTexture: 3
+  - BlockName: Leaf
+    isSolid: 1
+    isTransparent: 1
+    icon: {fileID: -7538633921802359561, guid: 0cf9f102d18dc48458d579ebd6a986ba, type: 3}
+    backFaceTexture: 16
+    frontFaceTexture: 16
+    topFaceTexture: 16
+    bottomFaceTexture: 16
+    leftFaceTexture: 16
+    rightFaceTexture: 16
   debugScreen: {fileID: 1988543250}
 --- !u!1001 &638603275
 PrefabInstance:
