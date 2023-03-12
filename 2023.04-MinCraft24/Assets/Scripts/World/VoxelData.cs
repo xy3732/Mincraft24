@@ -18,8 +18,8 @@ public class VoxelData : MonoBehaviour
 
     public static readonly int ViewDistanceInChunks = 5;
 
-    //현재 블럭 스프라이트 안에 가로 4개, 세로 4개의 블럭을 볼수 있다. 
-    public static readonly int TextureAtlasSizeInBlock = 4;
+    //현재 블럭 아틀라스 안에 가로 16개, 세로 16개의 블럭을 볼수 있다. 
+    public static readonly int TextureAtlasSizeInBlock = 16;
     public static float NormalizedBlockTextureSize
     {
         // 1의 크기로 노말라이즈 시켜주는 작업이다.

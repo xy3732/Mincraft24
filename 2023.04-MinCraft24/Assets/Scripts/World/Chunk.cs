@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -21,6 +22,8 @@ public class Chunk
     List<Vector2> uvs = new List<Vector2>();
      
     public byte[,,] voxelmap = new byte[VoxelData.ChunkWidth, VoxelData.ChunkHeight, VoxelData.ChunkWidth];
+
+    public Queue<VoxelMod> modifications = new Queue<VoxelMod>();
 
     World world;
 
@@ -83,8 +86,15 @@ public class Chunk
     }
 
     // 청크 생성기
-    void UpdateChunk()
+    public void UpdateChunk()
     {
+        while (modifications.Count > 0)
+        {
+            VoxelMod v = modifications.Dequeue();
+            Vector3 pos = v.pos -= position;
+            voxelmap[(int)pos.x, (int)pos.y, (int)pos.z] = v.id;    
+        }
+
         // 매쉬데이터 초기화
         ClearMeshData();
 
@@ -110,6 +120,7 @@ public class Chunk
         vertexIndex = 0;
         vertices.Clear();
         triangles.Clear();
+        transparentTriangles.Clear();
         uvs.Clear();
     }
 
