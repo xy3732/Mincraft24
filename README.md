@@ -20,3 +20,6 @@ Make again MinCraft new Version!
 - Add Block Destroy
 - Add Block Select
 - Update ItemSlots
+
+*version 0.0.005
+- Add Block Transparents Scripts.
