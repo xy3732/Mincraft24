@@ -27,3 +27,6 @@ Make again MinCraft new Version!
 
 *version 0.0.006
 - Add Threading code
+
+*version 0.0.007
+- Add Invetory Use Blocks.
